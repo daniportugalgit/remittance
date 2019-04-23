@@ -39,7 +39,7 @@ contract Remittance {
 	}
 
 	event PackageClaimed(address dealer, uint amount, uint packageId);
-	event PackageCanceled(address owner, uint packageId);
+	event PackageCancelled(address owner, uint packageId);
 	
 	function createPackage(address payable dealer, bytes32 hashedPassword, uint deadlineInBlocks) public payable returns(bool success) {
 		require(msg.value > 0, "You must send some ETH");
@@ -69,7 +69,7 @@ contract Remittance {
 	function cancelPackage(uint packageId) public onlyPackageOwner(packageId) onlyAfterDeadline(packageId) returns(bool success) {	
 		require(packages[packageId].isActive, "This package has already been claimed or cancelled");
 
-		emit PackageCanceled(msg.sender, packageId);
+		emit PackageCancelled(msg.sender, packageId);
 
 		packages[packageId].isActive = false;
 		msg.sender.transfer(packages[packageId].amount);
