@@ -4,6 +4,7 @@ pragma solidity 0.5.0;
 //import "./SafeMath.sol";
 
 //Version 0.01: basic structure. Let's do baby steps this time.
+//The only stretch goal so far is the deadline.
 contract Remittance {
 	uint public packageCount;
 	mapping(uint => Package) public packages;
@@ -43,6 +44,7 @@ contract Remittance {
 	
 	function createPackage(address payable dealer, bytes32 hashedPassword, uint deadlineInBlocks) public payable returns(bool success) {
 		require(msg.value > 0, "You must send some ETH");
+		require(dealer != address(0), "Please verify the dealer address.");
 
 		packages[packageCount] = Package(msg.sender, msg.value, dealer, hashedPassword, block.number + deadlineInBlocks, true, packageCount);
 		packageCount++;
