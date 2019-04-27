@@ -62,8 +62,8 @@ contract Remittance {
 		return true;
 	}
 
-	function hashPassword(string memory p1, string memory p2) private pure returns(bytes32) {
-		return keccak256(abi.encodePacked(p1, p2));
+	function hashPassword(address destination, string memory p1, string memory p2) public pure returns(bytes32) {
+		return keccak256(abi.encodePacked(destination, p1, p2));
 	}
 
 	function cancelPackage(bytes32 packageId) public onlyPackageOwner(packageId) onlyAfterDeadline(packageId) returns(bool success) {	
