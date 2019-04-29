@@ -3,7 +3,7 @@ pragma solidity 0.5.0;
 //import "./Pausable.sol";
 //import "./SafeMath.sol";
 
-//Version 0.02: Package id is now the hashed password itself.
+//Version 0.03: HashPassword now includes addres(this), to allow for multiple instances of the contract
 //The only stretch goal so far is the deadline.
 contract Remittance {
 	mapping(bytes32 => Package) public packages;
@@ -50,9 +50,9 @@ contract Remittance {
 		return true;
 	}
 
-	function claimPackage(bytes32 packageId, string memory recipientPassword, string memory dealerPassword) public onlyPackageDealer(packageId) onlyBeforeDeadline(packageId) returns(bool success) {
+	function claimPackage(bytes32 packageId, string memory recipientPassword) public onlyPackageDealer(packageId) onlyBeforeDeadline(packageId) returns(bool success) {
 		require(packages[packageId].isActive, "This package has already been claimed or cancelled");
-		require(hashPassword(recipientPassword, dealerPassword) == packageId, "Password does not match");
+		require(hashPassword(msg.sender, recipientPassword) == packageId, "Password does not match");
 		
 		emit PackageClaimed(msg.sender, packages[packageId].amount, packageId);
 
@@ -62,8 +62,8 @@ contract Remittance {
 		return true;
 	}
 
-	function hashPassword(address destination, string memory p1, string memory p2) public pure returns(bytes32) {
-		return keccak256(abi.encodePacked(destination, p1, p2));
+	function hashPassword(address destination, string memory recipientPassword) public view returns(bytes32) {
+		return keccak256(abi.encodePacked(address(this), destination, recipientPassword));
 	}
 
 	function cancelPackage(bytes32 packageId) public onlyPackageOwner(packageId) onlyAfterDeadline(packageId) returns(bool success) {	
