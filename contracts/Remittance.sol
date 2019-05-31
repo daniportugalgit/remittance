@@ -1,11 +1,9 @@
 pragma solidity 0.5.0;
 
-//import "./Pausable.sol";
-//import "./SafeMath.sol";
+import "./Pausable.sol";
 
-//Version 0.03: HashPassword now includes addres(this), to allow for multiple instances of the contract
-//The only stretch goal so far is the deadline.
-contract Remittance {
+//Version 0.9: pausable+ownable, password bugfix and unit tests
+contract Remittance is Pausable{
 	mapping(bytes32 => Package) public packages;
 
 	struct Package {
@@ -36,21 +34,23 @@ contract Remittance {
 		_; 
 	}
 	
-	event PackageClaimed(address dealer, uint amount, bytes32 packageId);
-	event PackageCancelled(address owner, bytes32 packageId);
+	event PackageCreated(address indexed owner, address indexed dealer, uint amount, bytes32 packageId);
+	event PackageClaimed(address indexed dealer, uint amount, bytes32 packageId);
+	event PackageCancelled(address indexed owner, bytes32 packageId);
 	
-	function createPackage(address payable dealer, bytes32 hashedPassword, uint deadlineInBlocks) public payable returns(bool success) {
+	function createPackage(address payable dealer, bytes32 hashedPassword, uint deadlineInBlocks) onlyReady public payable returns(bool success) {
 		require(msg.value > 0, "You must send some ETH");
 		require(packages[hashedPassword].from == address(0), "Package conflict: please choose different passwords"); // Only before initialization this value will equal address(0);
 		require(dealer != address(0), "Please verify the dealer address");
 		require(dealer != msg.sender, "You cannot be the dealer");
 
 		packages[hashedPassword] = Package(msg.sender, msg.value, dealer, block.number + deadlineInBlocks, true);
+		emit PackageCreated(msg.sender, dealer, msg.value, hashedPassword);
 		
 		return true;
 	}
 
-	function claimPackage(bytes32 packageId, string memory recipientPassword) public onlyPackageDealer(packageId) onlyBeforeDeadline(packageId) returns(bool success) {
+	function claimPackage(bytes32 packageId, string memory recipientPassword) onlyReady public onlyPackageDealer(packageId) onlyBeforeDeadline(packageId) returns(bool success) {
 		require(packages[packageId].isActive, "This package has already been claimed or cancelled");
 		require(hashPassword(msg.sender, recipientPassword) == packageId, "Password does not match");
 		
@@ -62,11 +62,11 @@ contract Remittance {
 		return true;
 	}
 
-	function hashPassword(address destination, string memory recipientPassword) public view returns(bytes32) {
-		return keccak256(abi.encodePacked(address(this), destination, recipientPassword));
+	function hashPassword(address dealer, string memory recipientPassword) public view returns(bytes32) {
+		return keccak256(abi.encodePacked(address(this), dealer, recipientPassword));
 	}
 
-	function cancelPackage(bytes32 packageId) public onlyPackageOwner(packageId) onlyAfterDeadline(packageId) returns(bool success) {	
+	function cancelPackage(bytes32 packageId) public onlyReady onlyPackageOwner(packageId) onlyAfterDeadline(packageId) returns(bool success) {	
 		require(packages[packageId].isActive, "This package has already been claimed or cancelled");
 
 		emit PackageCancelled(msg.sender, packageId);
